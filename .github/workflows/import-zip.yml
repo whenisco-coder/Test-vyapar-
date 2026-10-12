@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unpack source.zip into the repo
+      - name: Unpack source.zip into source/vyaparos-project-source
         run: |
           set -e
           test -f source.zip
@@ -17,12 +17,14 @@ jobs:
           if [ "$(ls -A /tmp/x | wc -l)" = "1" ] && [ -d "$(ls -d /tmp/x/*)" ]; then
             SRC="$(ls -d /tmp/x/*)"
           fi
+          mkdir -p source/vyaparos-project-source
           rsync -a --delete \
-            --exclude='.git/' --exclude='.github/' \
+            --exclude='.github/' \
             --exclude='package-lock.json' \
-            "$SRC"/ ./
+            "$SRC"/ source/vyaparos-project-source/
+          git rm -q source.zip
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git diff --cached --quiet || git commit -m "chore: import source zip"
+          git commit -m "chore: import source zip"
           git push
