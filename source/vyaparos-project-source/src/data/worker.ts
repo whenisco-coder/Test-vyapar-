@@ -141,31 +141,140 @@ workerScope.onmessage = async (e: MessageEvent<WorkerRequest>) => {
 
       case 'SAVE_BACKUP': {
         if (!db) await initEngine();
-        if (!(e.data.bytes instanceof Uint8Array) || e.data.bytes.byteLength === 0) throw new Error('Safety backup payload is empty or invalid');
-        const root = await navigator.storage.getDirectory();
-        const backupDir = await root.getDirectoryHandle('vyapar-os-backups', { create: true });
-        const fileName = `safety-${new Date().toISOString().replace(/[:.]/g, '-')}-${crypto.randomUUID()}.sqlite3`;
-        const handle = await backupDir.getFileHandle(fileName, { create: true });
-        const writable = await handle.createWritable();
-        try { await writable.write(e.data.bytes); await writable.close(); }
-        catch (error) { try { await writable.abort(); } catch { /* preserve original failure */ } throw error; }
-        const stored = await handle.getFile();
-        if (!stored.size) { await backupDir.removeEntry(fileName); throw new Error('Safety backup could not be verified: written file is empty'); }
-        const storedBytes = new Uint8Array(await stored.arrayBuffer());
-        if (storedBytes.byteLength !== e.data.bytes.byteLength) { await backupDir.removeEntry(fileName); throw new Error('Safety backup could not be verified: file size mismatch'); }
-        const digestBytes = new Uint8Array(new ArrayBuffer(storedBytes.byteLength));
-        digestBytes.set(storedBytes);
-        const digest = await crypto.subtle.digest('SHA-256', digestBytes);
-        const checksum = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
-        const files: Array<{ name: string; modified: number }> = [];
-        for await (const [name, entry] of backupDir.entries()) {
-          if (entry.kind !== 'file' || !/^safety-.*\.sqlite3$/.test(name)) continue;
-          const file = await (entry as FileSystemFileHandle).getFile(); files.push({ name, modified: file.lastModified });
+
+        const incomingBytes = e.data.bytes;
+
+        if (
+          !(incomingBytes instanceof Uint8Array) ||
+          incomingBytes.byteLength === 0
+        ) {
+          throw new Error('Safety backup payload is empty or invalid');
         }
-        files.sort((a, b) => b.modified - a.modified || b.name.localeCompare(a.name));
-        const retained = new Set([fileName, ...files.filter(file => file.name !== fileName).slice(0, 2).map(file => file.name)]);
-        for (const old of files) if (!retained.has(old.name)) await backupDir.removeEntry(old.name);
-        workerScope.postMessage({ id, success: true, result: { fileName, checksum, sizeBytes: stored.size } });
+
+        // Explicitly allocate an ArrayBuffer-backed Uint8Array.
+        // This avoids the Uint8Array<ArrayBufferLike> TypeScript error.
+        const safeBytes = new Uint8Array(
+          new ArrayBuffer(incomingBytes.byteLength),
+        );
+        safeBytes.set(incomingBytes);
+
+        const root = await navigator.storage.getDirectory();
+        const backupDir = await root.getDirectoryHandle(
+          'vyapar-os-backups',
+          { create: true },
+        );
+
+        const fileName =
+          `safety-${new Date().toISOString().replace(/[:.]/g, '-')}-${crypto.randomUUID()}.sqlite3`;
+
+        const handle = await backupDir.getFileHandle(fileName, {
+          create: true,
+        });
+        const writable = await handle.createWritable();
+
+        try {
+          await writable.write(safeBytes);
+          await writable.close();
+        } catch (error) {
+          try {
+            await writable.abort();
+          } catch {
+            // Preserve the original write error.
+          }
+
+          try {
+            await backupDir.removeEntry(fileName);
+          } catch {
+            // Preserve the original write error.
+          }
+
+          throw error;
+        }
+
+        const stored = await handle.getFile();
+
+        if (stored.size === 0) {
+          await backupDir.removeEntry(fileName);
+          throw new Error(
+            'Safety backup could not be verified: written file is empty',
+          );
+        }
+
+        const storedBytes = new Uint8Array(await stored.arrayBuffer());
+
+        if (storedBytes.byteLength !== safeBytes.byteLength) {
+          await backupDir.removeEntry(fileName);
+          throw new Error(
+            'Safety backup could not be verified: file size mismatch',
+          );
+        }
+
+        const digestBytes = new Uint8Array(
+          new ArrayBuffer(storedBytes.byteLength),
+        );
+        digestBytes.set(storedBytes);
+
+        const digest = await crypto.subtle.digest(
+          'SHA-256',
+          digestBytes,
+        );
+
+        const checksum = Array.from(
+          new Uint8Array(digest),
+          (byte) => byte.toString(16).padStart(2, '0'),
+        ).join('');
+
+        const files: Array<{ name: string; modified: number }> = [];
+
+        for await (const [name, entry] of backupDir.entries()) {
+          if (
+            entry.kind !== 'file' ||
+            !/^safety-.*\.sqlite3$/.test(name)
+          ) {
+            continue;
+          }
+
+          const file = await (
+            entry as FileSystemFileHandle
+          ).getFile();
+
+          files.push({
+            name,
+            modified: file.lastModified,
+          });
+        }
+
+        files.sort(
+          (a, b) =>
+            b.modified - a.modified ||
+            b.name.localeCompare(a.name),
+        );
+
+        // Retain the newest three safety backups, including this one.
+        const retained = new Set([
+          fileName,
+          ...files
+            .filter((file) => file.name !== fileName)
+            .slice(0, 2)
+            .map((file) => file.name),
+        ]);
+
+        for (const old of files) {
+          if (!retained.has(old.name)) {
+            await backupDir.removeEntry(old.name);
+          }
+        }
+
+        workerScope.postMessage({
+          id,
+          success: true,
+          result: {
+            fileName,
+            checksum,
+            sizeBytes: stored.size,
+          },
+        });
+
         break;
       }
 
