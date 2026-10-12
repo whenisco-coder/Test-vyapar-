@@ -7,7 +7,7 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     optimizeDeps: { exclude: ['@sqlite.org/sqlite-wasm'] },
-    worker: { format: 'es' },
+    worker: { format: 'es' as const },
     plugins: [
       react(),
       tailwindcss(),

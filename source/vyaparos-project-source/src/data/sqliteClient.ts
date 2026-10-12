@@ -561,6 +561,10 @@ class SqlDatabase implements IDatabaseClient {
   }
 }
 
+function normalizeSqlParams(params: unknown[]): SqlValue[] {
+  return params.map((value) => value === undefined ? null : value) as SqlValue[];
+}
+
 /**
  * Bridges the service layer's compatibility interface to the real SQLite driver.
  * Every SQL statement is executed by SQLite; transaction callbacks use the same
@@ -576,15 +580,15 @@ export class SqliteWorkerDatabaseClient implements IDatabaseClient {
   get migrationIdentity(): object { return this.rootIdentity; }
 
   query<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
-    return this.driver.query<T>(sql, params as SqlValue[]);
+    return this.driver.query<T>(sql, normalizeSqlParams(params));
   }
 
   queryOne<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T | null> {
-    return this.driver.queryOne<T>(sql, params as SqlValue[]);
+    return this.driver.queryOne<T>(sql, normalizeSqlParams(params));
   }
 
   execute(sql: string, params: unknown[] = []): Promise<void> {
-    return this.driver.exec(sql, params as SqlValue[]);
+    return this.driver.exec(sql, normalizeSqlParams(params));
   }
 
   transaction<T>(fn: (tx: IDatabaseClient) => Promise<T>): Promise<T> {

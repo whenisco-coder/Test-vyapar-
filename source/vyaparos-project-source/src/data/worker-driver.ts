@@ -9,6 +9,10 @@
 
 import { SqlDriver, SqlRow, SqlValue, OpfsNotSupportedError, StorageUnavailableError, TabLockedError } from './driver';
 
+function normalizeSqlParams(params: SqlValue[]): SqlValue[] {
+  return params.map((value) => value === undefined ? null : value);
+}
+
 export class WorkerDriver implements SqlDriver {
   private worker: Worker | null = null;
   private pendingRequests = new Map<
@@ -145,14 +149,14 @@ export class WorkerDriver implements SqlDriver {
   async exec(sql: string, params: SqlValue[] = []): Promise<void> {
     await this.init();
     return this.enqueue(async () => {
-      await this.sendRequest('EXEC', { sql, params });
+      await this.sendRequest('EXEC', { sql, params: normalizeSqlParams(params) });
     });
   }
 
   async query<T = SqlRow>(sql: string, params: SqlValue[] = []): Promise<T[]> {
     await this.init();
     return this.enqueue(async () => {
-      const rows = await this.sendRequest('QUERY', { sql, params });
+      const rows = await this.sendRequest('QUERY', { sql, params: normalizeSqlParams(params) });
       return (rows || []) as T[];
     });
   }
@@ -169,10 +173,10 @@ export class WorkerDriver implements SqlDriver {
       try {
         const txDriver: SqlDriver = {
           exec: async (sql: string, params: SqlValue[] = []) => {
-            await this.sendRequest('EXEC', { sql, params });
+            await this.sendRequest('EXEC', { sql, params: normalizeSqlParams(params) });
           },
           query: async <R = SqlRow>(sql: string, params: SqlValue[] = []) => {
-            const rows = await this.sendRequest('QUERY', { sql, params });
+            const rows = await this.sendRequest('QUERY', { sql, params: normalizeSqlParams(params) });
             return (rows || []) as R[];
           },
           queryOne: async <R = SqlRow>(sql: string, params: SqlValue[] = []) => {

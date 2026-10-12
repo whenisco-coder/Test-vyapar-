@@ -18,7 +18,7 @@ describe('restore safety using file-backed SQLite', () => {
     await db.init();
 
     // Model a persisted v2 database: neither of the v3 backup metadata columns exists.
-    db.raw.exec('ALTER TABLE backups_log DROP COLUMN file_name; ALTER TABLE backups_log DROP COLUMN size_bytes; PRAGMA user_version = 2;');
+    db.raw.exec('ALTER TABLE backups_log DROP COLUMN file_name; ALTER TABLE backups_log DROP COLUMN size_bytes; DELETE FROM schema_version WHERE version >= 3; PRAGMA user_version = 2;');
     const before = await db.query<{ name: string }>('PRAGMA table_info(backups_log);');
     expect(before.some((column) => column.name === 'file_name')).toBe(false);
     expect(before.some((column) => column.name === 'size_bytes')).toBe(false);
