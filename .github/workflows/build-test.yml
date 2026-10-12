@@ -1,40 +1,58 @@
 name: Vyapar OS build and test
 
 on:
-  workflow_dispatch:
+workflow_dispatch:
 
 permissions:
-  contents: read
+contents: read
 
 jobs:
-  pwa:
-    name: Test and build PWA
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: source/vyaparos-project-source
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - name: Type check
-        continue-on-error: true
-        run: npm run lint
-      - name: Run tests
-        continue-on-error: true
-        run: npm test -- --reporter=default
-      - name: Build PWA
-        run: npm run build
-      - name: Upload PWA build
-        uses: actions/upload-artifact@v4
-        with:
-          name: vyapar-os-pwa-dist
-          path: source/vyaparos-project-source/dist/
-          if-no-files-found: error
-          retention-days: 14
+pwa:
+name: Test and build PWA
+runs-on: ubuntu-latest
+defaults:
+run:
+working-directory: source/vyaparos-project-source
+
+steps:
+  - uses: actions/checkout@v4
+
+  - uses: actions/setup-node@v4
+    with:
+      node-version: 22
+
+  - name: Install dependencies
+    run: npm install --no-audit --no-fund
+
+  - name: Type check
+    continue-on-error: true
+    run: npm run lint
+
+  - name: Run tests
+    continue-on-error: true
+    run: npm test -- --reporter=default
+
+  - name: Build PWA
+    run: npm run build
+
+  - name: Upload PWA build
+    uses: actions/upload-artifact@v4
+    with:
+      name: vyapar-os-pwa-dist
+      path: source/vyaparos-project-source/dist/
+      if-no-files-found: error
+      retention-days: 14
+
+android:
+name: Build Android APK
+runs-on: ubuntu-latest
+defaults:
+run:
+working-directory: source/vyaparos-project-source
+
+steps:
+  - uses: actions/checkout@v4
+
   - uses: actions/setup-node@v4
     with:
       node-version: 22
@@ -49,6 +67,11 @@ jobs:
 
   - name: Build web assets
     run: npm run build
+
+  - name: Verify Capacitor configuration
+    run: |
+      test -f capacitor.config.ts || test -f capacitor.config.json
+      npx cap --version
 
   - name: Add Android platform if missing
     shell: bash
