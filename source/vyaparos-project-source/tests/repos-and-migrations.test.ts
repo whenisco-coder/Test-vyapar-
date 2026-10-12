@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { resetDatabaseClientForTesting } from '../src/data/sqliteClient';
 import { runMigrations, DowngradeNotAllowedError, splitMigrationStatements } from '../src/data/migrations';
+import { SCHEMA_VERSION } from '../src/data/schema';
 import { AppService } from '../src/domain/services';
 import { generateUUIDv7 } from '../src/domain/uuid';
 import { Customer, Product } from '../src/domain/types';
@@ -24,11 +25,11 @@ CREATE INDEX example_id ON example(id);`);
     expect(statements[1]).toContain('END;');
   });
 
-  it('runs migration up and records schema version 2', async () => {
+  it('runs migration up and records the current schema version', async () => {
     const v = await db.queryOne<{ version: number }>(
       'SELECT version FROM schema_version ORDER BY version DESC LIMIT 1'
     );
-    expect(Number(v?.version)).toBe(2);
+    expect(Number(v?.version)).toBe(SCHEMA_VERSION);
   });
 
   it('refuses database downgrade and throws DowngradeNotAllowedError', async () => {
@@ -36,8 +37,8 @@ CREATE INDEX example_id ON example(id);`);
   });
 
   it('does not export or back up a database when the schema version is already current', async () => {
-    const res = await runMigrations(db, 2);
-    expect(res).toEqual({ previousVersion: 2, newVersion: 2 });
+    const res = await runMigrations(db, SCHEMA_VERSION);
+    expect(res).toEqual({ previousVersion: SCHEMA_VERSION, newVersion: SCHEMA_VERSION });
   });
 
   it('appends an audit row to the changes table on EVERY write operation', async () => {

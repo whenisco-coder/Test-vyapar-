@@ -511,7 +511,7 @@ export const PartiesView: React.FC<PartiesViewProps> = ({ business }) => {
             placeholder="accounts@example.in"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            inputType="email"
+            type="email"
           />
 
           <div className="grid grid-cols-2 gap-3">

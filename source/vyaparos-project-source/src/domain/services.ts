@@ -520,7 +520,9 @@ export class AppService {
     if (!backup || !backup.bytes?.byteLength || backup.sizeBytes <= 0 || backup.sizeBytes !== backup.bytes.byteLength) {
       throw new Error('No valid non-empty safety backup is available to restore.');
     }
-    const digest = await crypto.subtle.digest('SHA-256', backup.bytes);
+    const checksumBytes = new Uint8Array(new ArrayBuffer(backup.bytes.byteLength));
+    checksumBytes.set(backup.bytes);
+    const digest = await crypto.subtle.digest('SHA-256', checksumBytes);
     const checksum = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
     if (checksum !== backup.checksum) throw new Error('Safety backup checksum mismatch; restore refused.');
     const log = await this.db.queryOne<{ file_name?: string; checksum: string }>(

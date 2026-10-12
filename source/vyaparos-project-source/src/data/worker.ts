@@ -133,7 +133,9 @@ workerScope.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         } else {
           bytes = sqlite3.capi.sqlite3_js_db_export(db);
         }
-        workerScope.postMessage({ id, success: true, bytes }, [bytes.buffer as ArrayBuffer]);
+        const transferableBytes = new Uint8Array(new ArrayBuffer(bytes.byteLength));
+        transferableBytes.set(bytes);
+        workerScope.postMessage({ id, success: true, bytes: transferableBytes }, [transferableBytes.buffer]);
         break;
       }
 
@@ -151,7 +153,9 @@ workerScope.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         if (!stored.size) { await backupDir.removeEntry(fileName); throw new Error('Safety backup could not be verified: written file is empty'); }
         const storedBytes = new Uint8Array(await stored.arrayBuffer());
         if (storedBytes.byteLength !== e.data.bytes.byteLength) { await backupDir.removeEntry(fileName); throw new Error('Safety backup could not be verified: file size mismatch'); }
-        const digest = await crypto.subtle.digest('SHA-256', storedBytes);
+        const digestBytes = new Uint8Array(new ArrayBuffer(storedBytes.byteLength));
+        digestBytes.set(storedBytes);
+        const digest = await crypto.subtle.digest('SHA-256', digestBytes);
         const checksum = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
         const files: Array<{ name: string; modified: number }> = [];
         for await (const [name, entry] of backupDir.entries()) {
@@ -180,7 +184,9 @@ workerScope.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         if (!files.length) { workerScope.postMessage({ id, success: true, result: null }); break; }
         const file = await (await backupDir.getFileHandle(files[0].name)).getFile();
         const bytes = new Uint8Array(await file.arrayBuffer());
-        const digest = await crypto.subtle.digest('SHA-256', bytes);
+        const digestBytes = new Uint8Array(new ArrayBuffer(bytes.byteLength));
+        digestBytes.set(bytes);
+        const digest = await crypto.subtle.digest('SHA-256', digestBytes);
         const checksum = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
         workerScope.postMessage({ id, success: true, result: { fileName: files[0].name, checksum, sizeBytes: bytes.byteLength, bytes }, bytes: bytes.buffer }, [bytes.buffer]);
         break;

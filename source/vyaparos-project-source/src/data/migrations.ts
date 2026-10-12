@@ -189,6 +189,7 @@ async function runMigrationsOnce(
 
     if (currentVersion < 3 && targetVersion >= 3) {
       await addColumnIfMissing(tx, 'backups_log', 'file_name', 'TEXT');
+      await addColumnIfMissing(tx, 'backups_log', 'size_bytes', 'INTEGER CHECK (size_bytes >= 0)');
     }
 
     const postTableSql = `${SCHEMA_INDEXES_SQL}\n${SCHEMA_TRIGGERS_SQL}\n${SCHEMA_VIEWS_SQL}`;

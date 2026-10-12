@@ -9,11 +9,14 @@ describe('SqliteWorkerDatabaseClient', () => {
       exec: vi.fn(async (sql: string, params: SqlValue[] = []) => { calls.push({ sql, params }); }),
       query: vi.fn(async <T = Record<string, unknown>>(sql: string, params: SqlValue[] = []) => {
         calls.push({ sql, params });
-        return [{ value: 7 }] as T[];
+        if (/^\s*PRAGMA\s+table_info\s*\(\s*"?demo"?\s*\)/i.test(sql)) {
+          return [{ name: 'id' }, { name: 'value' }] as unknown as T[];
+        }
+        return [{ value: 7 }] as unknown as T[];
       }),
       queryOne: vi.fn(async <T = Record<string, unknown>>(sql: string, params: SqlValue[] = []) => {
         calls.push({ sql, params });
-        return { value: 7 } as T;
+        return { value: 7 } as unknown as T;
       }),
       transaction: vi.fn(async <T>(fn: (tx: SqlDriver) => Promise<T>) => fn(driver)),
       exportDatabase: vi.fn(async () => new Uint8Array()),
@@ -42,8 +45,9 @@ it('restores immutable-ledger snapshots by recreating triggers inside the transa
     exec: vi.fn(async (sql: string) => { executed.push(sql); }),
     query: vi.fn(async <T = Record<string, unknown>>(sql: string) => {
       if (sql.includes("type = 'table'")) return [{ name: 'demo' }] as T[];
-      if (sql.includes("type = 'trigger'")) return [{ name: 'trg_demo_immutable' }] as T[];
-      return [] as T[];
+      if (sql.includes("type = 'trigger'")) return [{ name: 'trg_demo_immutable' }] as unknown as T[];
+      if (/^\s*PRAGMA\s+table_info\s*\(\s*\"?demo\"?\s*\)/i.test(sql)) return [{ name: 'id' }, { name: 'value' }] as unknown as T[];
+      return [] as unknown as T[];
     }),
     queryOne: vi.fn(async () => null),
     transaction: vi.fn(async <T>(fn: (tx: SqlDriver) => Promise<T>) => fn(driver)),

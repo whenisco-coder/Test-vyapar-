@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { compareChangeVersion, mergeLatestChanges, SyncChange } from '../src/domain/sync-merge';
 import { FakeNetwork, VirtualDevice } from './helpers/sync-simulation';
 
-const change = (id: string, row_id: string, hlc: string, payload: string): SyncChange => ({
-  id, table_name: 'products', row_id, hlc, payload, timestamp: new Date(Number(hlc.split(':')[0])).toISOString(),
+const change = (id: string, row_id: string, hlc: string, payload: string): SyncChange => {
+  const wallClock = Number(hlc.split(':')[0]);
+  const timestamp = Number.isFinite(wallClock) ? new Date(wallClock).toISOString() : new Date(0).toISOString();
+  return {
+  id, table_name: 'products', row_id, hlc, payload, timestamp,
   device_id: hlc.split(':')[2], origin_device_id: hlc.split(':')[2], op: 'UPDATE',
-});
+  };
+};
 
 describe('sync primitives and fault-injection harness', () => {
   it('chooses the same latest row change regardless of delivery order', () => {
