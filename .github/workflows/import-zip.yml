@@ -1,0 +1,28 @@
+name: Import source zip
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack source.zip into the repo
+        run: |
+          set -e
+          test -f source.zip
+          rm -rf /tmp/x && mkdir /tmp/x
+          unzip -q source.zip -d /tmp/x
+          SRC=/tmp/x
+          if [ "$(ls -A /tmp/x | wc -l)" = "1" ] && [ -d "$(ls -d /tmp/x/*)" ]; then
+            SRC="$(ls -d /tmp/x/*)"
+          fi
+          rsync -a --delete \
+            --exclude='.git/' --exclude='.github/' \
+            --exclude='package-lock.json' \
+            "$SRC"/ ./
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "chore: import source zip"
+          git push
