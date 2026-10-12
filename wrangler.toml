@@ -1,0 +1,5 @@
+name = "test-vyapar"
+compatibility_date = "2026-10-12"
+
+[assets]
+directory = "./source/vyaparos-project-source/dist"
