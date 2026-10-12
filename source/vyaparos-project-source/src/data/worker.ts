@@ -133,7 +133,8 @@ workerScope.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         } else {
           bytes = sqlite3.capi.sqlite3_js_db_export(db);
         }
-        const transferableBytes = new Uint8Array(bytes);
+        const transferableBytes = new Uint8Array(new ArrayBuffer(bytes.byteLength));
+        transferableBytes.set(bytes);
         workerScope.postMessage({ id, success: true, bytes: transferableBytes }, [transferableBytes.buffer]);
         break;
       }

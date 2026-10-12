@@ -1,9 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { SqlDriver, SqlRow, SqlValue } from '../src/data/driver';
 import { SqliteWorkerDatabaseClient } from '../src/data/sqliteClient';
 
-function makeDriver(calls: Array<{ sql: string; params?: SqlValue[] }> = [], executed: string[] = []): SqlDriver {
+function makeDriver(calls: Array<{ sql: string; params?: SqlValue[] }> = [], executed: string[] = []): SqlDriver & { queryOneCalls: Array<{ sql: string; params?: SqlValue[] }>; stats: { transactionCalls: number } } {
   let driver: SqlDriver;
+  const stats = { transactionCalls: 0 };
+  const queryOneCalls: Array<{ sql: string; params?: SqlValue[] }> = [];
   const exec: SqlDriver['exec'] = async (sql, params = []) => {
     calls.push({ sql, params });
     executed.push(sql);
@@ -19,18 +21,22 @@ function makeDriver(calls: Array<{ sql: string; params?: SqlValue[] }> = [], exe
   };
   const queryOne: SqlDriver['queryOne'] = async <T = SqlRow>(sql: string, params: SqlValue[] = []) => {
     calls.push({ sql, params });
+    queryOneCalls.push({ sql, params });
     return { value: 7 } as unknown as T;
   };
-  const transaction: SqlDriver['transaction'] = async <T>(fn: (tx: SqlDriver) => Promise<T>) => fn(driver);
-  driver = {
-    exec: vi.fn(exec),
-    query: vi.fn(query),
-    queryOne: vi.fn(queryOne),
-    transaction: vi.fn(transaction),
-    exportDatabase: vi.fn(async () => new Uint8Array()),
-    close: vi.fn(async () => {}),
+  const transaction: SqlDriver['transaction'] = async <T>(fn: (tx: SqlDriver) => Promise<T>) => {
+    stats.transactionCalls += 1;
+    return fn(driver);
   };
-  return driver;
+  driver = {
+    exec,
+    query,
+    queryOne,
+    transaction,
+    exportDatabase: async () => new Uint8Array(),
+    close: async () => {},
+  };
+  return Object.assign(driver, { queryOneCalls, stats });
 }
 
 describe('SqliteWorkerDatabaseClient', () => {
@@ -46,10 +52,10 @@ describe('SqliteWorkerDatabaseClient', () => {
     });
 
     expect(result).toBe('committed');
-    expect(driver.queryOne).toHaveBeenCalledWith('SELECT 7 AS value', []);
+    expect(driver.queryOneCalls).toContainEqual({ sql: 'SELECT 7 AS value', params: [] });
     expect(calls.some((call) => call.sql.startsWith('UPDATE demo'))).toBe(true);
     expect(calls.some((call) => call.sql.startsWith('INSERT INTO demo'))).toBe(true);
-    expect(driver.transaction).toHaveBeenCalledTimes(1);
+    expect(driver.stats.transactionCalls).toBe(1);
   });
 
   it('normalizes undefined SQL parameters to null before binding', async () => {

@@ -20,7 +20,7 @@ describe('Encrypted Backup & Restore System (T6, D14) — real SQLite', () => {
 
     const testCust: Customer = {
       id: generateUUIDv7(), name: 'Pooja Auto Agency', type: 'customer', party_kind: 'B2B',
-      gstin: '27AAPFU0939F1ZV', state_code: '27', device_id: 'dev-1', user_id: null,
+      gstin: '27AAPFU0939F1ZV', state_code: '27', device_id: 'dev-1', user_id: 'default-owner',
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     };
     await source.customers.save(testCust);
