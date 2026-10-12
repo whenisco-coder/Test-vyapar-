@@ -1,0 +1,5 @@
+{
+  "name": "Business OS",
+  "description": "Offline-first PWA for small Indian businesses: stock management, GST sales invoicing, payments, backup, and Tally XML export.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,28 @@
+# Glossary
+
+- **Ajrakhika**: the business; trades local Kutchi handicrafts and clothing.
+- **Ajrakh**: traditional block-printed textile of Kutch, using indigo and madder dyes.
+- **Karigar / artisan**: maker who supplies pieces, by purchase or consignment.
+- **Consignment**: artisan owns the stock until sold; payable only when a unit is sold.
+- **Unique piece**: a one-off item with its own photo and code (quantity 1).
+- **Variant**: a sellable version of a product (size, colour, fabric, print).
+- **GST / GSTIN**: Goods and Services Tax / its 15-character registration number.
+- **HSN**: product classification code used on GST invoices.
+- **CGST, SGST, IGST**: central, state and integrated GST. CGST+SGST within a state, IGST between states.
+- **Bill of Supply**: invoice without tax, used by composition dealers or for exempt supplies.
+- **E-invoicing**: government-portal invoice registration (IRN and QR). Not in this phase.
+- **Tally Prime**: accounting software; the app exports Sales vouchers as XML.
+- **FIFO**: first in, first out costing.
+- **Paise**: 1/100 rupee; all money is stored as integer paise.
+- **Basis points (bp)**: 1/100 of a percent; 18% is 1800 bp.
+- **Milli quantity**: quantity stored in thousandths so metres and kilos need no decimals.
+- **PWA**: web app installable on a phone and usable offline.
+- **WASM / OPFS**: WebAssembly / the browser's private file system where the database is stored.
+- **HLC**: hybrid logical clock; orders changes across devices.
+- **Change log**: table recording every write, used for sync.
+- **Action id**: id shared by all rows written by one user action; used for tracing.
+- **Checkpoint**: saved snapshot of stock, batches and balances at a point in time (D40).
+- **Sandbox**: separate database for dummy data and stress tests (D48).
+- **Relay**: small free cloud service that passes encrypted sync data between devices.
+- **Workspace key**: secret that encrypts synced data; held by your devices, not by the relay.
+- **Trace / Explain**: views that show the history of a record or the rows behind a number.
